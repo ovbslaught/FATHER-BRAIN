@@ -1,5 +1,5 @@
 # FATHER-BRAIN
-> Substrate: monolith-v.1 (pending rename to FATHER-BRAIN)
+> Substrate: FATHER-BRAIN (formerly monolith-v.1) — Renamed & Active
 > NOMADZ Daemon Stack | VCN-4.0
 > Drive: WORMHOLE/FATHER-LIFE/
 
