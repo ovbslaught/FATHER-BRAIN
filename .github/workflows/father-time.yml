@@ -1,0 +1,124 @@
+# FATHER-TIME Workflow
+# The FATHER-BRAIN scheduling daemon - runs on GitHub Actions free tier
+# Handles: pulse checks, epoch logging, watchdog triggers, stack sync
+# FREE TIER: unlimited on public repos
+
+name: FATHER-TIME
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # Every 6 hours (pulse heartbeat)
+    - cron: '0 0 * * 0'     # Weekly Sunday midnight (epoch snapshot)
+  push:
+    branches: [ Cosmic-key, main ]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode: pulse | epoch | watchdog | full'
+        required: false
+        default: 'pulse'
+
+jobs:
+  father-time-pulse:
+    name: LIFE Pulse Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout FATHER-BRAIN
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: LIFE Pulse Check
+        id: pulse
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_MODE: ${{ github.event.inputs.mode || 'pulse' }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, json, requests
+          from datetime import datetime
+
+          owner = 'ovbslaught'
+          token = os.environ.get('GH_TOKEN', '')
+          mode = os.environ.get('RUN_MODE', 'pulse')
+          headers = {
+            'Authorization': f'Bearer {token}',
+            'Accept': 'application/vnd.github.v3+json'
+          }
+
+          # Core stack repos to pulse-check
+          core_repos = ['VOLTRON', 'MOTHER-BRAIN', 'NOMADZ-0', 'monolith-v.1']
+
+          pulse = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'mode': mode,
+            'checks': {}
+          }
+
+          for repo in core_repos:
+            try:
+              r = requests.get(
+                f'https://api.github.com/repos/{owner}/{repo}',
+                headers=headers, timeout=10
+              )
+              if r.status_code == 200:
+                data = r.json()
+                pulse['checks'][repo] = {
+                  'status': 'ALIVE',
+                  'pushed_at': data.get('pushed_at', '')[:10],
+                  'open_issues': data.get('open_issues_count', 0)
+                }
+              else:
+                pulse['checks'][repo] = {'status': f'HTTP_{r.status_code}'}
+            except Exception as e:
+              pulse['checks'][repo] = {'status': 'TIMEOUT'}
+
+          pulse['all_alive'] = all(
+            v.get('status') == 'ALIVE' for v in pulse['checks'].values()
+          )
+
+          print(json.dumps(pulse, indent=2))
+          print(f"\nFATHER-TIME PULSE: {'ALL ALIVE' if pulse['all_alive'] else 'ATTENTION NEEDED'}")
+
+          os.makedirs('LIFE/pulse', exist_ok=True)
+          os.makedirs('FATHER-TIME/logs', exist_ok=True)
+
+          ts = datetime.utcnow().strftime('%Y%m%d_%H%M')
+          with open(f'LIFE/pulse/pulse_{ts}.json', 'w') as f:
+            json.dump(pulse, f, indent=2)
+          with open('LIFE/pulse/latest.json', 'w') as f:
+            json.dump(pulse, f, indent=2)
+
+          log_entry = f"[{pulse['timestamp']}] MODE={mode} STATUS={'OK' if pulse['all_alive'] else 'WARN'}\n"
+          with open('FATHER-TIME/logs/epoch.log', 'a') as f:
+            f.write(log_entry)
+          PYEOF
+
+      - name: Commit Pulse Log
+        run: |
+          git config user.name 'FATHER-TIME'
+          git config user.email 'actions@github.com'
+          git add LIFE/ FATHER-TIME/
+          git diff --cached --quiet || git commit -m "FATHER-TIME: pulse $(date -u +%Y-%m-%dT%H:%M)"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Pulse Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: father-time-pulse-${{ github.run_number }}
+          path: LIFE/pulse/latest.json
+          retention-days: 14
