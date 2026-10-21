@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-10-21T21:14:57.815896",
+  "mode": "pulse",
+  "checks": {
+    "VOLTRON": {
+      "status": "ALIVE",
+      "pushed_at": "2026-05-22",
+      "open_issues": 1
+    },
+    "MOTHER-BRAIN": {
+      "status": "ALIVE",
+      "pushed_at": "2026-10-21",
+      "open_issues": 2
+    },
+    "NOMADZ-0": {
+      "status": "ALIVE",
+      "pushed_at": "2026-10-08",
+      "open_issues": 8
+    },
+    "monolith-v.1": {
+      "status": "ALIVE",
+      "pushed_at": "2026-10-21",
+      "open_issues": 0
+    }
+  },
+  "all_alive": true
+}
